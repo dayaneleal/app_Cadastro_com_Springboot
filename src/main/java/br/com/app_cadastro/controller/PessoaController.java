@@ -1,11 +1,15 @@
 package br.com.app_cadastro.controller;
 
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
+
 import java.util.List;
 
 import javax.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,7 +22,10 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import br.com.app_cadastro.domain.vo.v1.PessoaVO;
 import br.com.app_cadastro.service.PessoaService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
+@Tag(name="Pessoa EndPoint")
 @RestController
 @RequestMapping("/pessoa/v1")
 public class PessoaController {
@@ -27,24 +34,33 @@ public class PessoaController {
 	PessoaService service;
 
 	// APLICAÇÃO SÓ ACEITA NESSE FORMATO
+	@CrossOrigin("localhost:8080")//permite o acesso
 	@RequestMapping(method = RequestMethod.GET, produces = {"application/json","application/xml"})
 	@ResponseStatus(value = HttpStatus.OK)
+	@Operation(summary="Listar todas as Pessoas")
 	public List<PessoaVO> findAll() {
-		return service.buscarTodos();
+		List<PessoaVO> pessoasVO = service.buscarTodos();
+		pessoasVO.stream().forEach(p -> p.add(linkTo(methodOn(PessoaController.class).findById(p.getKey())).withSelfRel()));
+		return pessoasVO;
 	}
 
 	// pega a variavel pela url e passa o long id
+	@CrossOrigin({"localhost:8080", "http://www.fgateste.com.br"}) //só esses dois endereços podem usar
 	@GetMapping(value = "/{id}", produces = {"application/json","application/xml"})
 	@ResponseStatus(value = HttpStatus.OK)
 	public PessoaVO findById(@PathVariable("id") Long id) {
-		return service.buscarPorId(id);
+		PessoaVO pessoaVO = service.buscarPorId(id);
+		pessoaVO.add(linkTo(methodOn(PessoaController.class).findById(id)).withSelfRel());
+		return pessoaVO;
 	}
 
 	@PostMapping(consumes = {"application/json","application/xml"}
 , produces = {"application/json","application/xml"})
 	@ResponseStatus(value = HttpStatus.CREATED)
 	public PessoaVO create(@Valid @RequestBody PessoaVO pessoa) {
-		return service.inserir(pessoa);
+		PessoaVO pessoaVO = service.inserir(pessoa);
+		pessoaVO.add(linkTo(methodOn(PessoaController.class).findById(pessoaVO.getKey())).withSelfRel());
+		return pessoaVO;
 
 	}
 
@@ -52,7 +68,9 @@ public class PessoaController {
 			"application/xml" })
 	@ResponseStatus(value = HttpStatus.OK)
 	public PessoaVO update(@Valid @RequestBody PessoaVO pessoa) {
-		return service.atualizar(pessoa);
+		PessoaVO pessoaVO = service.atualizar(pessoa);
+		pessoaVO.add(linkTo(methodOn(PessoaController.class).findById(pessoaVO.getKey())).withSelfRel());
+		return pessoaVO;
 	}
 
 	@DeleteMapping(value = "/{id}")
